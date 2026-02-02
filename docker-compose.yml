@@ -1,116 +1,51 @@
-# ═══════════════════════════════════════════════════════════════════════════
-# FELIX OS - Docker Compose para Coolify
-# ═══════════════════════════════════════════════════════════════════════════
-# Deploy direto no Coolify: Resources → + New → Docker Compose
-# ═══════════════════════════════════════════════════════════════════════════
+version: "3.8"
 
 services:
-  # ─────────────────────────────────────────────────────────────────────────
-  # PostgreSQL Database
-  # ─────────────────────────────────────────────────────────────────────────
   db:
     image: postgres:15-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-felixos}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-felixos123}
-      POSTGRES_DB: ${POSTGRES_DB:-felixos}
+      - POSTGRES_USER=${POSTGRES_USER:-felixos}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-felixos123}
+      - POSTGRES_DB=${POSTGRES_DB:-felixos}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-felixos}"]
+      test: ["CMD-SHELL", "pg_isready -U felixos"]
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - felixos-network
 
-  # ─────────────────────────────────────────────────────────────────────────
-  # API Backend (NestJS)
-  # ─────────────────────────────────────────────────────────────────────────
   api:
     build:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     environment:
-      NODE_ENV: production
-      PORT: 3000
-      DATABASE_URL: postgresql://${POSTGRES_USER:-felixos}:${POSTGRES_PASSWORD:-felixos123}@db:5432/${POSTGRES_DB:-felixos}
-      JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-key-change-in-production}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-felixos}:${POSTGRES_PASSWORD:-felixos123}@db:5432/${POSTGRES_DB:-felixos}
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
     ports:
       - "3000:3000"
-    volumes:
-      - uploads_data:/app/uploads
-    networks:
-      - felixos-network
 
-  # ─────────────────────────────────────────────────────────────────────────
-  # Frontend (Next.js)
-  # ─────────────────────────────────────────────────────────────────────────
   web:
     build:
       context: ./apps/web
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://api:3000/api/v1}
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://api:3000/api/v1}
     restart: unless-stopped
     depends_on:
       - api
     environment:
-      NODE_ENV: production
+      - NODE_ENV=production
     ports:
       - "3001:3000"
-    networks:
-      - felixos-network
-
-networks:
-  felixos-network:
-    driver: bridge
 
 volumes:
   postgres_data:
-  uploads_data:
-
-# ═══════════════════════════════════════════════════════════════════════════
-# INSTRUÇÕES COOLIFY:
-# ═══════════════════════════════════════════════════════════════════════════
-#
-# 1. No Coolify: Resources → + New → Docker Compose
-# 2. Conecte seu repositório GitHub: Felix1432-tech/projeto_felix_os
-# 3. Configure as variáveis de ambiente:
-#
-#    POSTGRES_USER=felixos
-#    POSTGRES_PASSWORD=SuaSenhaForteAqui123!
-#    POSTGRES_DB=felixos
-#    JWT_SECRET=SuaChaveJwtSuperSecretaAqui456!
-#    JWT_EXPIRES_IN=7d
-#    OPENAI_API_KEY=sk-sua-chave-openai
-#    NEXT_PUBLIC_API_URL=https://api.seudominio.com/api/v1
-#
-# 4. Configure os domínios no Coolify:
-#    - Serviço "api": api.seudominio.com → porta 3000
-#    - Serviço "web": app.seudominio.com → porta 3001
-#
-# 5. Ative HTTPS/SSL (Let's Encrypt automático)
-#
-# 6. Clique em Deploy!
-#
-# ═══════════════════════════════════════════════════════════════════════════
-# APÓS O DEPLOY:
-# ═══════════════════════════════════════════════════════════════════════════
-#
-# Execute o seed do banco (via Coolify Terminal no serviço api):
-#   npx prisma migrate deploy
-#   npx prisma db seed
-#
-# Credenciais padrão:
-#   Email: admin@demo.com
-#   Senha: demo123
-#
-# ═══════════════════════════════════════════════════════════════════════════
