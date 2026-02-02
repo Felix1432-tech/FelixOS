@@ -1,92 +1,72 @@
-# 🚀 Deploy no Coolify (Hostinger VPS)
+# 🚀 Deploy Felix OS no Coolify
 
-## Pré-requisitos
-- VPS Hostinger com Coolify instalado
-- Repositório Git (GitHub, GitLab, etc.)
+## Método: Docker Compose (Mais Simples!)
 
----
-
-## 📦 Passo 1: Criar o Banco de Dados
-
-1. No Coolify, vá em **Resources** → **+ New**
-2. Selecione **Database** → **PostgreSQL**
-3. Configure:
-   - Name: `felixos-db`
-   - Version: `15`
-4. Clique em **Deploy**
-5. Anote a **Connection String** gerada (vamos usar depois)
+O Coolify faz tudo automaticamente a partir do `docker-compose.yml`.
 
 ---
 
-## 🔧 Passo 2: Deploy da API (Backend)
+## 📋 Passo a Passo
 
-1. No Coolify, vá em **Resources** → **+ New**
-2. Selecione **Application** → **Docker**
-3. Conecte seu repositório Git
-4. Configure:
-   - **Name**: `felixos-api`
-   - **Branch**: `main`
-   - **Build Pack**: Dockerfile
-   - **Dockerfile Location**: `./Dockerfile`
-   - **Port**: `3000`
+### 1. No Coolify, crie novo recurso
 
-5. Em **Environment Variables**, adicione:
+1. Acesse seu Coolify
+2. Vá em **Resources** → **+ New**
+3. Selecione **Docker Compose**
+4. Conecte o repositório: `Felix1432-tech/projeto_felix_os`
+5. Branch: `main`
+
+### 2. Configure as Variáveis de Ambiente
+
+No Coolify, vá em **Environment Variables** e adicione:
 
 ```env
-NODE_ENV=production
-PORT=3000
-DATABASE_URL=postgresql://postgres:SENHA@felixos-db:5432/postgres
-JWT_SECRET=sua-chave-super-secreta-mudar-isso-123
+# Banco de Dados
+POSTGRES_USER=felixos
+POSTGRES_PASSWORD=SuaSenhaForte123!
+POSTGRES_DB=felixos
+
+# API
+JWT_SECRET=SuaChaveJwtSecreta456!
 JWT_EXPIRES_IN=7d
-OPENAI_API_KEY=sk-sua-chave-openai (opcional)
-```
 
-6. Clique em **Deploy**
+# OpenAI (opcional - para diagnóstico por voz)
+OPENAI_API_KEY=sk-sua-chave-aqui
 
----
-
-## 🌐 Passo 3: Deploy do Frontend
-
-1. No Coolify, vá em **Resources** → **+ New**
-2. Selecione **Application** → **Docker**
-3. Conecte o mesmo repositório Git
-4. Configure:
-   - **Name**: `felixos-web`
-   - **Branch**: `main`
-   - **Build Pack**: Dockerfile
-   - **Dockerfile Location**: `./apps/web/Dockerfile`
-   - **Base Directory**: `./apps/web`
-   - **Port**: `3000`
-
-5. Em **Build Arguments**, adicione:
-
-```
+# Frontend - URL da API (IMPORTANTE!)
 NEXT_PUBLIC_API_URL=https://api.seudominio.com/api/v1
 ```
 
-6. Clique em **Deploy**
+### 3. Configure os Domínios
+
+No Coolify, para cada serviço:
+
+| Serviço | Domínio | Porta |
+|---------|---------|-------|
+| api | api.seudominio.com | 3000 |
+| web | app.seudominio.com | 3001 |
+
+- Ative **HTTPS** (Let's Encrypt automático)
+
+### 4. Deploy!
+
+Clique em **Deploy** e aguarde.
 
 ---
 
-## 🔗 Passo 4: Configurar Domínios
+## 🔧 Após o Deploy
 
-No Coolify, para cada aplicação:
+### Executar Migrations
 
-1. Vá em **Settings** → **Domains**
-2. Adicione:
-   - API: `api.seudominio.com`
-   - Frontend: `app.seudominio.com` ou `seudominio.com`
-3. Ative **SSL/HTTPS** (Let's Encrypt automático)
+No Coolify, acesse o terminal do serviço `api`:
 
----
+```bash
+npx prisma migrate deploy
+npx prisma db seed
+```
 
-## ✅ Pronto!
+### Credenciais de Teste
 
-Acesse:
-- **Frontend**: https://app.seudominio.com
-- **API Docs**: https://api.seudominio.com/api/docs
-
-### Credenciais de teste:
 ```
 Email: admin@demo.com
 Senha: demo123
@@ -94,22 +74,55 @@ Senha: demo123
 
 ---
 
-## 🔄 Atualizações
+## ✅ Verificar se Funcionou
 
-O Coolify faz deploy automático a cada push no Git!
+- **Frontend**: https://app.seudominio.com
+- **API Health**: https://api.seudominio.com/api/health
+- **API Docs**: https://api.seudominio.com/api/docs
 
 ---
 
-## 🆘 Troubleshooting
+## 🔄 Atualizações Automáticas
 
-### Erro de conexão com banco:
-- Verifique se o nome do container do PostgreSQL está correto na DATABASE_URL
-- No Coolify, o nome do serviço é usado como hostname
+Configure o Webhook no GitHub para deploy automático a cada push!
 
-### Erro de build:
-- Verifique os logs em **Deployments**
-- Confirme que o Dockerfile está no caminho correto
+1. No Coolify, copie o Webhook URL
+2. No GitHub, vá em Settings → Webhooks → Add webhook
+3. Cole a URL e selecione "Push events"
 
-### API não responde:
-- Verifique se a porta 3000 está exposta
-- Confira os logs da aplicação
+---
+
+## 🆘 Problemas Comuns
+
+### API não conecta no banco
+- Verifique se o serviço `db` está saudável
+- Confira a senha no `POSTGRES_PASSWORD`
+
+### Frontend mostra erro de conexão
+- Verifique se `NEXT_PUBLIC_API_URL` está correto
+- Deve ser a URL pública da API (com https://)
+
+### Erro no build
+- Veja os logs em **Deployments**
+- Geralmente é falta de variável de ambiente
+
+---
+
+## 📊 Arquitetura
+
+```
+┌─────────────────────────────────────────────────────┐
+│                    COOLIFY                          │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│   ┌─────────┐    ┌─────────┐    ┌─────────┐       │
+│   │   web   │───▶│   api   │───▶│   db    │       │
+│   │ :3001   │    │ :3000   │    │ :5432   │       │
+│   │ Next.js │    │ NestJS  │    │Postgres │       │
+│   └─────────┘    └─────────┘    └─────────┘       │
+│        │              │                            │
+│        ▼              ▼                            │
+│   app.dominio    api.dominio                       │
+│                                                     │
+└─────────────────────────────────────────────────────┘
+```
