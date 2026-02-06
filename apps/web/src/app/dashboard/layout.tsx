@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
+import { Header } from "@/components/layout/header";
 import { useAuthStore } from "@/stores/auth.store";
 
 export default function DashboardLayout({
@@ -25,8 +26,11 @@ export default function DashboardLayout({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent"></div>
+          <p className="text-sm text-muted-foreground">Carregando...</p>
+        </div>
       </div>
     );
   }
@@ -36,11 +40,12 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <Sidebar />
-      <main className="md:ml-64 min-h-screen">
-        <div className="p-6 pt-16 md:pt-6">{children}</div>
-      </main>
+      <div className="md:ml-64 min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 p-6 pt-4">{children}</main>
+      </div>
     </div>
   );
 }
