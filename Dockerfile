@@ -11,11 +11,13 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
 
-# Instalar todas as dependências (incluindo dev para ts-node do seed)
+# Forcar NODE_ENV=development para npm ci instalar devDependencies (nest cli, typescript, etc)
+ENV NODE_ENV=development
 RUN npm ci
 
 # Stage 2: Build
 FROM node:20-alpine AS builder
+ENV NODE_ENV=development
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
