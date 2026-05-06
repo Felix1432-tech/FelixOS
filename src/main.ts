@@ -22,11 +22,18 @@ async function bootstrap() {
   );
 
   // CORS - Permitir frontend acessar a API
-  const corsOrigin = process.env.CORS_ORIGIN || process.env.FRONTEND_URL || 'http://localhost:3001';
-  console.log(`CORS habilitado para: ${corsOrigin}`);
+  const corsOrigins = (process.env.CORS_ORIGIN || process.env.FRONTEND_URL || 'http://localhost:3001')
+    .split(',')
+    .map((o) => o.trim());
 
   app.enableCors({
-    origin: corsOrigin,
+    origin: (origin, callback) => {
+      if (!origin || corsOrigins.includes(origin) || origin.endsWith('.felixai.cloud')) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS bloqueado: ${origin}`));
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
